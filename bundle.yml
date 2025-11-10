@@ -1,0 +1,53 @@
+bundle:
+  name: hf_model_serving_bundle
+  description: "Databricks bundle: bootstrap UC and deploy Hugging Face model"
+  databricks:
+    workspace:
+      host: https://<your-workspace-url>
+    target: dev
+
+resources:
+  jobs:
+    # ------------------ Day 0: Bootstrap ------------------
+    bootstrap_unity_catalog:
+      name: hf-bootstrap-uc
+      enabled: false
+      tasks:
+        - task_key: uc_init
+          description: "Creates catalog, schema, volume if not present"
+          python_task:
+            python_file: "hf_model_serving/bootstrap_unity_catalog.py"
+            parameters:
+              - "--config_path"
+              - "config.yaml"
+          new_cluster:
+            spark_version: 14.3.x-scala2.12
+            node_type_id: Standard_DS3_v2
+            num_workers: 1
+            custom_tags:
+              phase: bootstrap
+          timeout_seconds: 600
+
+    # ------------------ Day 1: Deploy ------------------
+    hf_model_serving_job:
+      name: hf-model-deploy
+      depends_on:
+        - bootstrap_unity_catalog
+      tasks:
+        - task_key: deploy_model
+          description: "Registers model & creates serving endpoint"
+          python_wheel_task:
+            package_name: hf_model_serving
+            entry_point: deploy_main
+            parameters:
+              - "--config_path"
+              - "config.yaml"
+          new_cluster:
+            spark_version: 14.3.x-scala2.12
+            node_type_id: Standard_DS3_v2
+            num_workers: 1
+            init_scripts:
+              - dbfs:/databricks/scripts/init.sh
+            custom_tags:
+              phase: deploy
+          timeout_seconds: 1800

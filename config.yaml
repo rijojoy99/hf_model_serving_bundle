@@ -1,0 +1,32 @@
+# config.yaml
+
+bootstrap:
+  enabled: true            # Set to false after the first run
+  catalog_name: main
+  schema_name: hf_mlflow_models
+  log_schema_name: hf_logs
+  volume_name: hf_uploads
+  principal: users          # Or your service principal/group
+
+model:
+  name: hf_text_generation
+  local_path: /Volumes/hf_uploads/models/text-gen
+  catalog_path: main.hf_mlflow_models.text_gen
+  description: "Hugging Face text generation model"
+  framework: transformers
+  enable_tracing: true
+
+serving:
+  endpoint_name: hf-text-gen-endpoint
+  workload_type: CPU
+  workload_size: Small
+  scale_to_zero: true
+  inference_logging: true
+  inference_catalog: main
+  inference_schema: hf_logs
+  table_prefix: textgen_payload
+
+rollback:
+  enabled: true
+  strategy: revert_previous
+  timeout_seconds: 900
